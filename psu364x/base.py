@@ -69,7 +69,7 @@ class Psu:
         
         
         if port is not None:
-            self.open()
+            res = self.open()
     
     
     #----------------------------------------------------------------------------
@@ -137,7 +137,7 @@ class Psu:
             raise serial.SerialException("Serial port was not opened!")
         
         if parameters is None:
-            parameters = ""
+            parameters = bytes()
             
         if isinstance(parameters, (list, tuple)):
             if any(not isinstance(c, int) for c in parameters):
@@ -146,44 +146,47 @@ class Psu:
             if any((c < 0 or c > 255) for c in parameters):
                 raise ValueError("lists used as the parameters argument must only contain integers representation of characters (0-255)")
             
-            parameters = "".join(chr(c) for c in parameters)
+            parameters = bytes(c for c in parameters)
             
-        if type(parameters) is not str:
+        if type(parameters) is not bytes:
             raise ValueError("The parameters argument must be a string, a list or a tuple object")
 
         ## Build the command frame (26 bytes) => {0xAA}, {ADDRESS}, {COMMAND}, {DATA : 22 bytes}
         data = struct.pack('<B B B 22s', 0xAA, self.address, command, parameters)
 
         ## Append the checksum of the 25 first bytes to the frame ##
-        data += chr((sum(ord(c) for c in data)) % 256)
+        data += bytes([(sum(c for c in data)) % 256])
         
         if self.debug:
-            print "Send   :  ADDRESS={0} CMD={1:02X}".format(self.address, command)
-            print "Frame  : ", " ".join("{:02X}".format(ord(c)) for c in data)
+            print("Send   :  ADDRESS={0} CMD={1:02X}".format(self.address, command))
+            print("Frame  : ", " ".join("{:02X}".format(c) for c in data))
         
+        #self.sio.read(5000)
+
         ## Send the command frame ##
         self.sio.write(data)
         self.sio.flush()
         
         ## Read the response frame. It must be 26 bytes long ##
         result = self.sio.read(26)
+       #result = self.sio.read(500)
         if self.debug:
-            print "Return : ", " ".join("{:02X}".format(ord(c)) for c in result)
+            print("Return : ", " ".join("{:02X}".format(c) for c in result))
         
         
         if len(result) < 26:
-            if self.debug: print "Result :  ERROR! Unexpected response length\n"
+            if self.debug: print("Result :  ERROR! Unexpected response length\n")
             raise UnexpectedResponse("Unexpected number of bytes")
         
-        if not ord(result[25]) == (sum(ord(c) for c in result[:25])) % 256:
-            if self.debug: print "Result :  ERROR! Bad checksum\n"
+        if not result[25] == (sum(c for c in result[:25])) % 256:
+            if self.debug: print("Result :  ERROR! Bad checksum\n")
             raise UnexpectedResponse("Checksum failed")
         
         
-        if (ord(result[2]) == self.COMMAND_CHECK and ord(result[3]) == self.RESULT_OK) or ord(result[2]) == command:
-            if self.debug: print "Result :  OK\n"
+        if (result[2] == self.COMMAND_CHECK and result[3] == self.RESULT_OK) or result[2] == command:
+            if self.debug: print("Result :  OK\n")
         else:
-            if self.debug: print "Result :  ERROR!\n"
+            if self.debug: print("Result :  ERROR!\n")
             return None
         
         
@@ -216,9 +219,9 @@ class Psu:
         params.voltageSet = float(struct.unpack_from('<L', data, 19)[0]) / 1000
         
         
-        params.outputState = (ord(data[23]) & 0x01 == 0x01)
-        params.excessiveCurrent = (ord(data[23]) & 0x02 == 0x02)
-        params.excessivePower = (ord(data[23]) & 0x04 == 0x04)
+        params.outputState = (data[23] & 0x01 == 0x01)
+        params.excessiveCurrent = (data[23] & 0x02 == 0x02)
+        params.excessivePower = (data[23] & 0x04 == 0x04)
         
         return params
     
