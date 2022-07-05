@@ -682,7 +682,7 @@ class Params:
             String representation of the class
         """
         
-        return "maxVoltage={0}V, maxCurrent={1}A, maxPower={2}W, voltageSet={3}V, measureVoltage={4}V, measureCurrent={5}A, measurePower={6}W, outputState={7}, excessiveCurrent={8}, excessivePower={9}".format(
+        return "set [ {3:.3f} V ] [ {1:.3f} A ] // meas [ {4:.3f} V ] [ {5:.3f} A ] ({6:.3f} W)  [ {7} ]{8}{9}".format(
             self.maxVoltage,
             self.maxCurrent,
             self.maxPower,
@@ -690,9 +690,9 @@ class Params:
             self.measureVoltage,
             self.measureCurrent,
             self.measurePower,
-            "ON" if self.outputState else "OFF",
-            "True" if self.excessiveCurrent else "False",
-            "True" if self.excessivePower else "False")
+            "ON " if self.outputState else "off",
+            " EXCESSIVE CURRENT!" if self.excessiveCurrent else "",
+            " EXCESSIVE POWER!" if self.excessivePower else "")
 
 
 
